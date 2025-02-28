@@ -71,8 +71,8 @@ installed and `yas-expand-snippet' will be used to insert components.
 When nil, template text will be inserted."
   :group 'googledocstrings
   :type '(choice (const :tag "None" nil)
-                 (const :tag "Prompt" prompt)
-                 (const :tag "Yasnippet" yas)))
+          (const :tag "Prompt" prompt)
+          (const :tag "Yasnippet" yas)))
 
 (defcustom googledocstrings-quote-char ?\"
   "Character for docstring quoting style (double or single quote)."
@@ -183,10 +183,10 @@ The argument takes on one of four possible styles:
                 (name (s-trim (car comps2)))
                 (type (cadr comps2)))
            (make-googledocstrings--arg :name name
-                               :type (if type
-                                         (googledocstrings--none-to-optional (s-trim type))
-                                       nil)
-                               :defval defval)))
+                                       :type (if type
+                                                 (googledocstrings--none-to-optional (s-trim type))
+                                               nil)
+                                       :defval defval)))
         ;; only a typehint
         ((and (string-match-p ":" argstr)
               (not (s-contains-p "=" argstr)))
@@ -194,20 +194,20 @@ The argument takes on one of four possible styles:
                 (name (s-trim (car comps1)))
                 (type (s-trim (cadr comps1))))
            (make-googledocstrings--arg :name name
-                               :type (googledocstrings--none-to-optional type)
-                               :defval nil)))
+                                       :type (googledocstrings--none-to-optional type)
+                                       :defval nil)))
         ;; only a default value
         ((s-contains-p "=" argstr)
          (let* ((comps1 (s-split-up-to "=" argstr 1))
                 (name (s-trim (car comps1)))
                 (defval (s-trim (cadr comps1))))
            (make-googledocstrings--arg :name name
-                               :type nil
-                               :defval defval)))
+                                       :type nil
+                                       :defval defval)))
         ;; only a name
         (t (make-googledocstrings--arg :name argstr
-                               :type nil
-                               :defval nil))))
+                                       :type nil
+                                       :defval nil))))
 
 (defun googledocstrings--split-args (fnargs)
   "Split FNARGS on comma but ignore those in type [brackets]."
@@ -376,18 +376,18 @@ This function assumes the cursor to be in the function body."
     (set-mark-command nil)
     (move-end-of-line nil)
     (fill-paragraph nil t)
-    (deactivate-mark))
-  ;; if description continues onto multiple lines, indent extra lines 2 spaces
-  (if (> (googledocstrings--lines-in-paragraph) 1)
-      (save-excursion
-        (backward-paragraph)
-        (forward-line 2)
-        (move-beginning-of-line nil)
-        (set-mark-command nil)
-        (forward-paragraph)
-        (string-insert-rectangle (region-beginning) (region-end) "  ")
-        (deactivate-mark))
-    nil))
+    ;; if new paragraph has more than one line, indent extra lines
+    ;; by two spaces
+    (if (> (count-lines (region-beginning) (region-end)) 2)
+        (progn
+          (exchange-point-and-mark)
+          (forward-line)
+          (move-beginning-of-line nil)
+          (set-mark-command nil)
+          (forward-paragraph)
+          (string-insert-rectangle (region-beginning) (region-end) (make-string 2 ?\s)))
+      nil)
+    (deactivate-mark)))
 
 (defun googledocstrings--insert (indent &rest lines)
   "Insert all elements of LINES at indent level INDENT."
@@ -403,13 +403,13 @@ This function assumes the cursor to be in the function body."
                     (t googledocstrings-template-long))))
     (insert "\n")
     (googledocstrings--insert indent
-                      (concat (make-string 3 googledocstrings-quote-char)
-                              (if (googledocstrings--prompt-p)
-                                  (read-string
-                                   (format "Short description: "))
-                                tmps)
-                              "\n\n")
-                      (make-string 3 googledocstrings-quote-char))
+                              (concat (make-string 3 googledocstrings-quote-char)
+                                      (if (googledocstrings--prompt-p)
+                                          (read-string
+                                           (format "Short description: "))
+                                        tmps)
+                                      "\n\n")
+                              (make-string 3 googledocstrings-quote-char))
     (forward-line -1)
     (beginning-of-line)
     (if (googledocstrings--prompt-p)
@@ -430,9 +430,9 @@ This function assumes the cursor to be in the function body."
 (defun googledocstrings--insert-item (indent name &optional type)
   "Insert parameter with NAME and TYPE at level INDENT."
   (googledocstrings--insert (+ indent 4)  ;; google doc style has args indented
-                    (if type
-                        (format "%s (%s): " name type)  ;; google doc style has desc on same line
-                      (format "%s: " name))))
+                            (if type
+                                (format "%s (%s): " name type)  ;; google doc style has desc on same line
+                              (format "%s: " name))))
 
 (defun googledocstrings--insert-item-and-type (indent name type)
   "Insert parameter with NAME and TYPE at level INDENT."
@@ -454,10 +454,10 @@ This function assumes the cursor to be in the function body."
   (let* ((tmpd (cond ((googledocstrings--yas-p) googledocstrings--yas-replace-pat)
                      (t googledocstrings-template-arg-desc)))
          (desc (concat ;;(make-string 4 ?\s)
-                      (if (googledocstrings--prompt-p)
-                          (read-string (format "Description for %s: "
-                                               element))
-                        tmpd))))
+                (if (googledocstrings--prompt-p)
+                    (read-string (format "Description for %s: "
+                                         element))
+                  tmpd))))
     (googledocstrings--insert 0 desc)  ;; zero indent
     (when googledocstrings-auto-fill-paragraphs
       (googledocstrings--fill-last-insertion))
@@ -468,14 +468,14 @@ This function assumes the cursor to be in the function body."
   (when fnargs
     (insert "\n")
     (googledocstrings--insert indent "Args:\n")
-                      ;; "Parameters\n"
-                      ;; "----------\n")
+    ;; "Parameters\n"
+    ;; "----------\n")
     (dolist (element fnargs)
       (googledocstrings--insert-item-and-type indent
-                                      (googledocstrings--arg-name element)
-                                      (googledocstrings--arg-type element))
+                                              (googledocstrings--arg-name element)
+                                              (googledocstrings--arg-type element))
       (googledocstrings--insert-item-desc indent
-                                  (googledocstrings--arg-name element)))))
+                                          (googledocstrings--arg-name element)))))
 
 (defun googledocstrings--insert-return (indent fnret)
   "Insert FNRET (return) description (if exists) at INDENT level."
@@ -485,18 +485,18 @@ This function assumes the cursor to be in the function body."
               (and fnret (not (string= fnret "None"))))
       (insert "\n")
       (googledocstrings--insert indent
-                        "Returns:\n"
-                        ;; "-------\n"
-                        (cond (fnret fnret)
-                              ((googledocstrings--prompt-p) (read-string "Return type: "))
-                              ((googledocstrings--yas-p) googledocstrings--yas-replace-pat)
-                              (t googledocstrings-template-type-desc)))
+                                "Returns:")
+      ;; "-------\n"
+      ;; (cond (fnret fnret)
+      ;;       ((googledocstrings--prompt-p) (read-string "Return type: "))
+      ;;       ((googledocstrings--yas-p) googledocstrings--yas-replace-pat)
+      ;;       (t googledocstrings-template-type-desc)))
       (insert "\n")
       (googledocstrings--insert indent
-                        (concat (make-string 4 ?\s)
-                                (if (googledocstrings--prompt-p)
-                                    (read-string "Description for return: ")
-                                  tmpr)))
+                                (concat (make-string 4 ?\s)
+                                        (if (googledocstrings--prompt-p)
+                                            (read-string "Description for return: ")
+                                          tmpr)))
       (when googledocstrings-auto-fill-paragraphs
         (googledocstrings--fill-last-insertion))
       (insert "\n"))))
@@ -506,9 +506,9 @@ This function assumes the cursor to be in the function body."
   (when (and googledocstrings-insert-raises-block fnexcepts)
     (insert "\n")
     (googledocstrings--insert indent
-                      "Raises:\n"
-                      ;; "------\n"
-                      )
+                              "Raises:\n"
+                              ;; "------\n"
+                              )
     (dolist (exstr fnexcepts)
       (googledocstrings--insert-item indent exstr)
       (googledocstrings--insert-item-desc indent exstr))))
@@ -520,9 +520,9 @@ This function assumes the cursor to be in the function body."
     (when googledocstrings-insert-examples-block
       (insert "\n")
       (googledocstrings--insert indent
-                        "Examples:\n"
-                        ;; "--------\n"
-                        (concat tmpd "\n")))))
+                                "Examples:\n"
+                                ;; "--------\n"
+                                (concat tmpd "\n")))))
 
 (defun googledocstrings--yasnippetfy ()
   "Take the template and convert to yasnippet then execute."
@@ -614,7 +614,7 @@ function that is being documented."
       (python-nav-beginning-of-defun)
       (python-nav-end-of-statement)
       (googledocstrings--insert-docstring (googledocstrings--detect-indent)
-                                  (googledocstrings--parse-def fnsig)))))
+                                          (googledocstrings--parse-def fnsig)))))
 
 ;; Local Variables:
 ;; sentence-end-double-space: nil
