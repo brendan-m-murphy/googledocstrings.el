@@ -368,7 +368,7 @@ This function assumes the cursor to be in the function body."
     (forward-paragraph)
     (- (count-lines (region-beginning) (region-end)) 1)))
 
-(defun googledocstrings--fill-last-insertion ()
+(defun googledocstrings--fill-last-insertion (&optional extra-indent)
   "Fill paragraph on last inserted text."
   (save-excursion
     (move-beginning-of-line nil)
@@ -378,14 +378,11 @@ This function assumes the cursor to be in the function body."
     (fill-paragraph nil t)
     ;; if new paragraph has more than one line, indent extra lines
     ;; by two spaces
-    (if (> (count-lines (region-beginning) (region-end)) 2)
+    (if (and extra-indent (> (count-lines (region-beginning) (region-end)) 2))
         (progn
           (exchange-point-and-mark)
           (forward-line)
-          (move-beginning-of-line nil)
-          (set-mark-command nil)
-          (forward-paragraph)
-          (string-insert-rectangle (region-beginning) (region-end) (make-string 2 ?\s)))
+          (string-insert-rectangle (region-beginning) (region-end) (make-string extra-indent ?\s)))
       nil)
     (deactivate-mark)))
 
@@ -460,7 +457,7 @@ This function assumes the cursor to be in the function body."
                   tmpd))))
     (googledocstrings--insert 0 desc)  ;; zero indent
     (when googledocstrings-auto-fill-paragraphs
-      (googledocstrings--fill-last-insertion))
+      (googledocstrings--fill-last-insertion 2))
     (insert "\n")))
 
 (defun googledocstrings--insert-parameters (indent fnargs)
@@ -498,7 +495,7 @@ This function assumes the cursor to be in the function body."
                                             (read-string "Description for return: ")
                                           tmpr)))
       (when googledocstrings-auto-fill-paragraphs
-        (googledocstrings--fill-last-insertion))
+        (googledocstrings--fill-last-insertion 2))
       (insert "\n"))))
 
 (defun googledocstrings--insert-exceptions (indent fnexcepts)
