@@ -79,12 +79,12 @@ When nil, template text will be inserted."
   :group 'googledocstrings
   :type 'character)
 
-(defcustom googledocstrings-insert-examples-block t
+(defcustom googledocstrings-insert-examples-block nil
   "Flag to control if Examples section is inserted into the buffer."
   :group 'googledocstrings
   :type 'boolean)
 
-(defcustom googledocstrings-insert-parameter-types t
+(defcustom googledocstrings-insert-parameter-types nil
   "Flag to control if Parameter types are inserted based on type hints."
   :group 'googledocstrings
   :type 'boolean)
@@ -360,6 +360,14 @@ This function assumes the cursor to be in the function body."
                              (s-chop-prefix "raise " x))))
              lines)))))
 
+(defun googledocstrings--lines-in-paragraph ()
+  "Count number of lines in current paragraph."
+  (save-excursion
+    (backward-paragraph)
+    (set-mark-command nil)
+    (forward-paragraph)
+    (- (count-lines (region-beginning) (region-end)) 1)))
+
 (defun googledocstrings--fill-last-insertion ()
   "Fill paragraph on last inserted text."
   (save-excursion
@@ -368,7 +376,18 @@ This function assumes the cursor to be in the function body."
     (set-mark-command nil)
     (move-end-of-line nil)
     (fill-paragraph nil t)
-    (deactivate-mark)))
+    (deactivate-mark))
+  ;; if description continues onto multiple lines, indent extra lines 2 spaces
+  (if (> (googledocstrings--lines-in-paragraph) 1)
+      (save-excursion
+        (backward-paragraph)
+        (forward-line 2)
+        (move-beginning-of-line nil)
+        (set-mark-command nil)
+        (forward-paragraph)
+        (string-insert-rectangle (region-beginning) (region-end) "  ")
+        (deactivate-mark))
+    nil))
 
 (defun googledocstrings--insert (indent &rest lines)
   "Insert all elements of LINES at indent level INDENT."
@@ -410,9 +429,9 @@ This function assumes the cursor to be in the function body."
 
 (defun googledocstrings--insert-item (indent name &optional type)
   "Insert parameter with NAME and TYPE at level INDENT."
-  (googledocstrings--insert (+ indent 1)  ;; google doc style has args indented
+  (googledocstrings--insert (+ indent 4)  ;; google doc style has args indented
                     (if type
-                        (format "%s : %s: " name type)  ;; google doc style has desc on same line
+                        (format "%s (%s): " name type)  ;; google doc style has desc on same line
                       (format "%s: " name))))
 
 (defun googledocstrings--insert-item-and-type (indent name type)
